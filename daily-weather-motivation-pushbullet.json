@@ -1,176 +1,109 @@
 {
-  "name": "Daily Weather + Motivation Push",
   "nodes": [
     {
       "parameters": {
-        "triggerTimes": [
-          {
-            "mode": "everyDay",
-            "hour": 6,
-            "minute": 0
-          }
-        ]
+        "mode": "everyDay",
+        "time": "06:00"
       },
-      "name": "Cron",
-      "type": "n8n-nodes-base.cron",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1,
-      "position": [
-        200,
-        300
-      ]
+      "uuid": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+      "id": "node1"
     },
     {
       "parameters": {
-        "url": "https://wttr.in/Pasig?format=Weather:+%C+\ud83c\udf21+%t",
-        "responseFormat": "string",
-        "options": {}
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "options": {
+          "jsonParse": true
+        },
+        "query": {
+          "latitude": "14.5605",
+          "longitude": "121.0765",
+          "current_weather": "true",
+          "temperature_unit": "celsius",
+          "wind_speed_unit": "ms"
+        }
       },
-      "name": "Weather",
+      "name": "HTTP Request",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
-      "position": [
-        400,
-        200
-      ]
+      "uuid": "b2c3d4e5-f6a7-8901-2345-67890abcdef0",
+      "executeOnce": true,
+      "id": "node2"
     },
     {
       "parameters": {
-        "resource": "chat",
+        "authentication": "api_key",
+        "apiKey": "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",
         "model": "gpt-3.5-turbo",
+        "operation": "chat",
         "messages": [
           {
             "role": "user",
-            "content": "Give me one short motivational quote for the day (under 20 words)."
+            "content": "Write a concise, uplifting, and positive daily motivational message, around 2-3 sentences long. Focus on themes of productivity, growth, or perseverance. Do not include any greetings or sign-offs."
           }
-        ],
-        "temperature": 0.7
+        ]
       },
-      "name": "Motivation",
-      "type": "n8n-nodes-base.openai",
+      "name": "OpenAI",
+      "type": "n8n-nodes-base.openAi",
       "typeVersion": 1,
-      "position": [
-        400,
-        400
-      ],
-      "credentials": {
-        "openAiApi": {
-          "id": "1",
-          "name": "OpenAI Account"
-        }
-      }
+      "uuid": "c3d4e5f6-a7b8-9012-3456-7890abcdef01",
+      "executeOnce": true,
+      "id": "node3"
     },
     {
       "parameters": {
-        "values": {
-          "string": [
-            {
-              "name": "message",
-              "value": "={{$node[\"Weather\"].json}} \n{{$node[\"Motivation\"].json[\"choices\"][0][\"message\"][\"content\"]}}"
-            }
-          ]
-        }
-      },
-      "name": "Format Message",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 1,
-      "position": [
-        600,
-        300
-      ]
-    },
-    {
-      "parameters": {
-        "url": "https://api.pushbullet.com/v2/pushes",
-        "method": "POST",
-        "headers": [
-          {
-            "name": "Access-Token",
-            "value": "={{$env.PUSHBULLET_TOKEN}}"
-          },
-          {
-            "name": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "options": {},
-        "bodyParametersUi": {
-          "parameter": [
-            {
-              "name": "type",
-              "value": "note"
-            },
-            {
-              "name": "title",
-              "value": "\ud83c\udf24 Daily Boost"
-            },
-            {
-              "name": "body",
-              "value": "={{$node[\"Format Message\"].json[\"message\"]}}"
-            }
-          ]
-        }
+        "authentication": "api_key",
+        "apiKey": "o.l4zdSasIomxpMc0Rl5sjjtF8ykpFiZnO",
+        "type": "note",
+        "title": "Daily Update for Pasig, PH",
+        "body": "Good morning!\n\nCurrent weather in Pasig, PH:\nTemperature: {{ $node[\"HTTP Request\"].json.current_weather.temperature }}°C\nWind Speed: {{ $node[\"HTTP Request\"].json.current_weather.windspeed }} m/s\n\nYour daily motivation:\n\"{{ $node[\"OpenAI\"].json.choices[0].message.content }}\""
       },
       "name": "Pushbullet",
-      "type": "n8n-nodes-base.httpRequest",
+      "type": "n8n-nodes-base.pushbullet",
       "typeVersion": 1,
-      "position": [
-        800,
-        300
-      ]
+      "uuid": "d4e5f6a7-b8c9-0123-4567-890abcdef012",
+      "executeOnce": true,
+      "id": "node4"
     }
   ],
   "connections": {
-    "Cron": {
+    "Schedule Trigger": {
       "main": [
         [
           {
-            "node": "Weather",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Motivation",
-            "type": "main",
-            "index": 0
+            "node": "HTTP Request",
+            "input": "main",
+            "output": "main"
           }
         ]
       ]
     },
-    "Weather": {
+    "HTTP Request": {
       "main": [
         [
           {
-            "node": "Format Message",
-            "type": "main",
-            "index": 0
+            "node": "OpenAI",
+            "input": "main",
+            "output": "main"
           }
         ]
       ]
     },
-    "Motivation": {
-      "main": [
-        [
-          {
-            "node": "Format Message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Message": {
+    "OpenAI": {
       "main": [
         [
           {
             "node": "Pushbullet",
-            "type": "main",
-            "index": 0
+            "input": "main",
+            "output": "main"
           }
         ]
       ]
     }
   },
+  "name": "Daily Weather & Motivation",
   "active": false,
-  "settings": {},
-  "id": "1748939786"
+  "id": "daily-weather-motivation-workflow"
 }
