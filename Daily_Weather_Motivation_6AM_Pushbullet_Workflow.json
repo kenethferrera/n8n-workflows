@@ -1,0 +1,176 @@
+{
+  "name": "Daily Weather + Motivation Push",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": [
+          {
+            "mode": "everyDay",
+            "hour": 6,
+            "minute": 0
+          }
+        ]
+      },
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://wttr.in/Pasig?format=Weather:+%C+\ud83c\udf21+%t",
+        "responseFormat": "string",
+        "options": {}
+      },
+      "name": "Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        400,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "chat",
+        "model": "gpt-3.5-turbo",
+        "messages": [
+          {
+            "role": "user",
+            "content": "Give me one short motivational quote for the day (under 20 words)."
+          }
+        ],
+        "temperature": 0.7
+      },
+      "name": "Motivation",
+      "type": "n8n-nodes-base.openai",
+      "typeVersion": 1,
+      "position": [
+        400,
+        400
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "1",
+          "name": "OpenAI Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "message",
+              "value": "={{$node[\"Weather\"].json}} \n{{$node[\"Motivation\"].json[\"choices\"][0][\"message\"][\"content\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Format Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://api.pushbullet.com/v2/pushes",
+        "method": "POST",
+        "headers": [
+          {
+            "name": "Access-Token",
+            "value": "={{$env.PUSHBULLET_TOKEN}}"
+          },
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "options": {},
+        "bodyParametersUi": {
+          "parameter": [
+            {
+              "name": "type",
+              "value": "note"
+            },
+            {
+              "name": "title",
+              "value": "\ud83c\udf24 Daily Boost"
+            },
+            {
+              "name": "body",
+              "value": "={{$node[\"Format Message\"].json[\"message\"]}}"
+            }
+          ]
+        }
+      },
+      "name": "Pushbullet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [
+        800,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "Weather",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Motivation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weather": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Motivation": {
+      "main": [
+        [
+          {
+            "node": "Format Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Message": {
+      "main": [
+        [
+          {
+            "node": "Pushbullet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "id": "1748939786"
+}
